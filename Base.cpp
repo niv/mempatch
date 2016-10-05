@@ -15,8 +15,13 @@ struct PatchData {
 	std::string m_backtrace;
 };
 
-// pointer value -> patchdata (for overlap checking)
-static std::unordered_map<uintptr_t, PatchData> s_patched;
+using PatchDataMap = std::unordered_map<uintptr_t, PatchData>;
+
+static PatchDataMap& GetPatchMap()
+{
+	static auto map = new PatchDataMap();
+	return *map;
+}
 
 Base::Base(void* addr, size_t len, size_t expect_len, const void* expect) :
 	m_addr(addr), m_len(len)
@@ -36,7 +41,7 @@ Base::Base(void* addr, size_t len, size_t expect_len, const void* expect) :
 
 	// Make sure the given addr and len do not overlap with any other
 	// existing patch.
-	for (auto& pair : s_patched) {
+	for (auto& pair : GetPatchMap()) {
 		if (std::max((uintptr_t)addr, pair.first) <=
 		        std::min((uintptr_t)addr + len, pair.first + pair.second.m_len)) {
 			std::stringstream serr;
@@ -66,17 +71,12 @@ Base::Base(void* addr, size_t len, size_t expect_len, const void* expect) :
 		sbt = "(no backtrace available)";
 
 	PatchData pd = { len, sbt };
-	// printf("patchadd addr=%x len=%d, sbt=%s\n", addr, len, sbt.c_str());
-	// printf("spatched size: %d\n", s_patched.size());
-
-	// gdb bug that throws a FPE. See #61143
-	s_patched.reserve(1);
-	s_patched[(uintptr_t)addr] = pd;
+	GetPatchMap()[(uintptr_t)addr] = pd;
 }
 
 Base::~Base()
 {
-	s_patched.erase((uintptr_t)m_addr);
+	GetPatchMap().erase((uintptr_t)m_addr);
 }
 
 }

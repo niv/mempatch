@@ -46,7 +46,7 @@ Example:
 ```cpp
 int32_t hey = 1;
 {
-	memory_patch::Simple patcher(&hey, "\xff\x00\x00\x00");
+	memory_patch::Simple patcher(&hey, 4, "\xff\x00\x00\x00");
 	assert(hey == 0xff);
 }
 // patcher goes out of scope and gets unapplied.
